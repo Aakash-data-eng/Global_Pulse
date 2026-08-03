@@ -1,0 +1,370 @@
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+
+    NEW.updated_at := CURRENT_TIMESTAMP;
+
+    RETURN NEW;
+
+END;
+$$;
+
+CREATE TRIGGER trg_users_updated_at
+BEFORE UPDATE
+ON users
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trg_investment_types_updated_at
+BEFORE UPDATE
+ON investment_types
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trg_expense_categories_updated_at
+BEFORE UPDATE
+ON expense_categories
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trg_subscription_plans_updated_at
+BEFORE UPDATE
+ON subscription_plans
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trg_nifty50_companies_updated_at
+BEFORE UPDATE
+ON nifty50_companies
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trg_goals_updated_at
+BEFORE UPDATE
+ON goals
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trg_incomes_updated_at
+BEFORE UPDATE
+ON incomes
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trg_expenses_updated_at
+BEFORE UPDATE
+ON expenses
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trg_budgets_updated_at
+BEFORE UPDATE
+ON budgets
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trg_user_subscriptions_updated_at
+BEFORE UPDATE
+ON user_subscriptions
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trg_customer_reviews_updated_at
+BEFORE UPDATE
+ON customer_reviews
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+
+
+
+
+
+
+
+
+
+----------------------------------------------------------
+CREATE OR REPLACE FUNCTION fn_audit_logger()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+
+    v_module_name VARCHAR;
+
+    v_record_id BIGINT;
+
+    v_pk_column VARCHAR;
+
+BEGIN
+
+    ------------------------------------------------------------------
+    -- Module Name (Passed from Trigger)
+    ------------------------------------------------------------------
+
+    v_module_name := TG_ARGV[0];
+
+    ------------------------------------------------------------------
+    -- Build Primary Key Column Name
+    ------------------------------------------------------------------
+
+    v_pk_column :=
+        CASE TG_TABLE_NAME
+
+            WHEN 'users' THEN 'user_id'
+
+            WHEN 'goals' THEN 'goal_id'
+
+            WHEN 'goal_progress' THEN 'progress_id'
+
+            WHEN 'incomes' THEN 'income_id'
+
+            WHEN 'expenses' THEN 'expense_id'
+
+            WHEN 'budgets' THEN 'budget_id'
+
+            WHEN 'user_subscriptions' THEN 'subscription_id'
+
+            WHEN 'customer_reviews' THEN 'review_id'
+
+            WHEN 'otp_verifications' THEN 'otp_id'
+
+            WHEN 'social_logins' THEN 'social_login_id'
+
+            WHEN 'user_sessions' THEN 'session_id'
+
+            WHEN 'stock_data' THEN 'stock_data_id'
+
+            WHEN 'technical_indicators' THEN 'technical_indicator_id'
+
+            WHEN 'company_news' THEN 'news_id'
+
+            WHEN 'company_sentiments' THEN 'sentiment_id'
+
+            ELSE NULL
+
+        END;
+
+    ------------------------------------------------------------------
+    -- INSERT
+    ------------------------------------------------------------------
+
+    IF TG_OP = 'INSERT' THEN
+
+        v_record_id := (to_jsonb(NEW)->>v_pk_column)::BIGINT;
+
+        INSERT INTO audit_logs
+        (
+            user_id,
+            module_name,
+            table_name,
+            record_id,
+            action,
+            old_data,
+            new_data,
+            description
+        )
+        VALUES
+        (
+            NEW.user_id,
+            v_module_name,
+            TG_TABLE_NAME,
+            v_record_id,
+            TG_OP,
+            NULL,
+            to_jsonb(NEW),
+            TG_OP || ' on ' || TG_TABLE_NAME
+        );
+
+        RETURN NEW;
+
+    END IF;
+
+    ------------------------------------------------------------------
+    -- UPDATE
+    ------------------------------------------------------------------
+
+    IF TG_OP = 'UPDATE' THEN
+
+        v_record_id := (to_jsonb(NEW)->>v_pk_column)::BIGINT;
+
+        INSERT INTO audit_logs
+        (
+            user_id,
+            module_name,
+            table_name,
+            record_id,
+            action,
+            old_data,
+            new_data,
+            description
+        )
+        VALUES
+        (
+            NEW.user_id,
+            v_module_name,
+            TG_TABLE_NAME,
+            v_record_id,
+            TG_OP,
+            to_jsonb(OLD),
+            to_jsonb(NEW),
+            TG_OP || ' on ' || TG_TABLE_NAME
+        );
+
+        RETURN NEW;
+
+    END IF;
+
+    ------------------------------------------------------------------
+    -- DELETE
+    ------------------------------------------------------------------
+
+    IF TG_OP = 'DELETE' THEN
+
+        v_record_id := (to_jsonb(OLD)->>v_pk_column)::BIGINT;
+
+        INSERT INTO audit_logs
+        (
+            user_id,
+            module_name,
+            table_name,
+            record_id,
+            action,
+            old_data,
+            new_data,
+            description
+        )
+        VALUES
+        (
+            OLD.user_id,
+            v_module_name,
+            TG_TABLE_NAME,
+            v_record_id,
+            TG_OP,
+            to_jsonb(OLD),
+            NULL,
+            TG_OP || ' on ' || TG_TABLE_NAME
+        );
+
+        RETURN OLD;
+
+    END IF;
+
+    RETURN NULL;
+
+END;
+$$;
+
+CREATE TRIGGER trg_users_audit
+AFTER INSERT OR UPDATE OR DELETE
+ON users
+FOR EACH ROW
+EXECUTE FUNCTION fn_audit_logger(
+    'Authentication',
+    'user_id'
+);
+
+CREATE TRIGGER trg_goals_audit
+AFTER INSERT OR UPDATE OR DELETE
+ON goals
+FOR EACH ROW
+EXECUTE FUNCTION fn_audit_logger(
+    'Goals',
+    'goal_id'
+);
+
+CREATE TRIGGER trg_goal_progress_audit
+AFTER INSERT OR UPDATE OR DELETE
+ON goal_progress
+FOR EACH ROW
+EXECUTE FUNCTION fn_audit_logger(
+    'Goals',
+    'progress_id'
+);
+
+CREATE TRIGGER trg_incomes_audit
+AFTER INSERT OR UPDATE OR DELETE
+ON incomes
+FOR EACH ROW
+EXECUTE FUNCTION fn_audit_logger(
+    'Expense Tracker',
+    'income_id'
+);
+
+CREATE TRIGGER trg_expenses_audit
+AFTER INSERT OR UPDATE OR DELETE
+ON expenses
+FOR EACH ROW
+EXECUTE FUNCTION fn_audit_logger(
+    'Expense Tracker',
+    'expense_id'
+);
+
+CREATE TRIGGER trg_budgets_audit
+AFTER INSERT OR UPDATE OR DELETE
+ON budgets
+FOR EACH ROW
+EXECUTE FUNCTION fn_audit_logger(
+    'Expense Tracker',
+    'budget_id'
+);
+
+CREATE TRIGGER trg_user_subscriptions_audit
+AFTER INSERT OR UPDATE OR DELETE
+ON user_subscriptions
+FOR EACH ROW
+EXECUTE FUNCTION fn_audit_logger(
+    'Subscription',
+    'subscription_id'
+);
+
+CREATE TRIGGER trg_customer_reviews_audit
+AFTER INSERT OR UPDATE OR DELETE
+ON customer_reviews
+FOR EACH ROW
+EXECUTE FUNCTION fn_audit_logger(
+    'Subscription',
+    'review_id'
+);
+
+CREATE TRIGGER trg_stock_data_audit
+AFTER INSERT OR UPDATE OR DELETE
+ON stock_data
+FOR EACH ROW
+EXECUTE FUNCTION fn_audit_logger(
+    'Market',
+    'stock_data_id'
+);
+
+CREATE TRIGGER trg_technical_indicators_audit
+AFTER INSERT OR UPDATE OR DELETE
+ON technical_indicators
+FOR EACH ROW
+EXECUTE FUNCTION fn_audit_logger(
+    'Market',
+    'technical_indicator_id'
+);
+
+CREATE TRIGGER trg_company_news_audit
+AFTER INSERT OR UPDATE OR DELETE
+ON company_news
+FOR EACH ROW
+EXECUTE FUNCTION fn_audit_logger(
+    'Market',
+    'news_id'
+);
+
+CREATE TRIGGER trg_company_sentiments_audit
+AFTER INSERT OR UPDATE OR DELETE
+ON company_sentiments
+FOR EACH ROW
+EXECUTE FUNCTION fn_audit_logger(
+    'Market',
+    'sentiment_id'
+);
+
+
+

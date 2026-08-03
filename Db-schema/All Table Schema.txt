@@ -1,0 +1,628 @@
+CREATE TABLE investment_types (
+
+    investment_type_id BIGSERIAL PRIMARY KEY,
+
+    investment_name VARCHAR(100) NOT NULL UNIQUE,
+
+    description TEXT,
+
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+
+);
+
+CREATE TABLE expense_categories (
+
+    category_id BIGSERIAL PRIMARY KEY,
+
+    category_name VARCHAR(100) NOT NULL UNIQUE,
+
+    description TEXT,
+
+    icon_name VARCHAR(100),
+
+    color_code VARCHAR(20),
+
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+
+);
+
+CREATE TABLE subscription_plans (
+
+    plan_id BIGSERIAL PRIMARY KEY,
+
+    plan_name VARCHAR(100) NOT NULL UNIQUE,
+
+    description TEXT,
+
+    monthly_price NUMERIC(10,2) NOT NULL
+        CHECK (monthly_price >= 0),
+
+    yearly_price NUMERIC(10,2)
+        CHECK (yearly_price >= 0),
+
+    billing_cycle VARCHAR(20) NOT NULL
+        CHECK (billing_cycle IN ('MONTHLY', 'YEARLY', 'FREE')),
+
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE nifty50_companies (
+
+    company_id BIGSERIAL PRIMARY KEY,
+
+    company_name VARCHAR(150) NOT NULL UNIQUE,
+
+    ticker VARCHAR(20) NOT NULL UNIQUE,
+
+    sector VARCHAR(100) NOT NULL,
+
+    industry VARCHAR(100),
+
+    exchange VARCHAR(20) NOT NULL DEFAULT 'NSE',
+
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE users (
+
+    user_id BIGSERIAL PRIMARY KEY,
+
+    first_name VARCHAR(100) NOT NULL,
+
+    last_name VARCHAR(100),
+
+    username VARCHAR(50) UNIQUE,
+
+    email VARCHAR(255) NOT NULL UNIQUE,
+
+    mobile_number VARCHAR(20) UNIQUE,
+
+    password_hash TEXT,
+
+    auth_provider VARCHAR(20) NOT NULL DEFAULT 'LOCAL'
+        CHECK (auth_provider IN ('LOCAL', 'GOOGLE')),
+
+    profile_image TEXT,
+
+    is_email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+
+    is_mobile_verified BOOLEAN NOT NULL DEFAULT FALSE,
+
+    account_status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE'
+        CHECK (
+            account_status IN (
+                'ACTIVE',
+                'INACTIVE',
+                'SUSPENDED',
+                'DELETED'
+            )
+        ),
+
+    last_login_at TIMESTAMPTZ,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE otp_verifications (
+
+    otp_id BIGSERIAL PRIMARY KEY,
+
+    user_id BIGINT NOT NULL,
+
+    otp_code VARCHAR(10) NOT NULL,
+
+    otp_type VARCHAR(30) NOT NULL
+        CHECK (
+            otp_type IN (
+                'EMAIL_VERIFICATION',
+                'MOBILE_VERIFICATION',
+                'PASSWORD_RESET'
+            )
+        ),
+
+    expires_at TIMESTAMPTZ NOT NULL,
+
+    is_verified BOOLEAN NOT NULL DEFAULT FALSE,
+
+    verified_at TIMESTAMPTZ,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_otp_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE social_logins (
+
+    social_login_id BIGSERIAL PRIMARY KEY,
+
+    user_id BIGINT NOT NULL,
+
+    provider VARCHAR(30) NOT NULL
+        CHECK (
+            provider IN (
+                'GOOGLE',
+                'APPLE',
+                'MICROSOFT',
+                'FACEBOOK'
+            )
+        ),
+
+    provider_user_id VARCHAR(255) NOT NULL,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT uq_social_provider_user
+        UNIQUE (provider, provider_user_id),
+
+    CONSTRAINT fk_social_login_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON DELETE CASCADE
+);
+
+
+CREATE TABLE user_sessions (
+
+    session_id BIGSERIAL PRIMARY KEY,
+
+    user_id BIGINT NOT NULL,
+
+    access_token TEXT NOT NULL,
+
+    refresh_token TEXT,
+
+    device_type VARCHAR(50),
+
+    device_name VARCHAR(255),
+
+    ip_address INET,
+
+    login_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    logout_time TIMESTAMPTZ,
+
+    expires_at TIMESTAMPTZ NOT NULL,
+
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_user_sessions_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON DELETE CASCADE
+);
+
+
+CREATE TABLE goals (
+
+    goal_id BIGSERIAL PRIMARY KEY,
+
+    user_id BIGINT NOT NULL,
+
+    investment_type_id BIGINT NOT NULL,
+
+    goal_name VARCHAR(150) NOT NULL,
+
+    goal_description TEXT,
+
+    target_amount NUMERIC(18,2) NOT NULL
+        CHECK (target_amount > 0),
+
+    current_amount NUMERIC(18,2) NOT NULL DEFAULT 0
+        CHECK (current_amount >= 0),
+
+    investment_unit VARCHAR(20),
+
+    target_date DATE NOT NULL,
+
+    goal_status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE'
+        CHECK (
+            goal_status IN (
+                'ACTIVE',
+                'COMPLETED',
+                'PAUSED',
+                'CANCELLED',
+                'EXPIRED'
+            )
+        ),
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_goals_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_goals_investment_type
+        FOREIGN KEY (investment_type_id)
+        REFERENCES investment_types(investment_type_id)
+        ON DELETE RESTRICT
+);
+
+CREATE TABLE goal_progress (
+
+    progress_id BIGSERIAL PRIMARY KEY,
+
+    goal_id BIGINT NOT NULL,
+
+    progress_amount NUMERIC(18,2) NOT NULL
+        CHECK (progress_amount > 0),
+
+    progress_date DATE NOT NULL,
+
+    remarks TEXT,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_goal_progress_goal
+        FOREIGN KEY (goal_id)
+        REFERENCES goals(goal_id)
+        ON DELETE CASCADE
+);
+
+
+CREATE TABLE incomes (
+
+    income_id BIGSERIAL PRIMARY KEY,
+
+    user_id BIGINT NOT NULL,
+
+    amount NUMERIC(18,2) NOT NULL
+        CHECK (amount > 0),
+
+    income_date DATE NOT NULL,
+
+    payment_method VARCHAR(30) NOT NULL
+        CHECK (
+            payment_method IN (
+                'CASH',
+                'BANK_TRANSFER',
+                'UPI',
+                'DEBIT_CARD',
+                'CREDIT_CARD',
+                'CHEQUE',
+                'OTHER'
+            )
+        ),
+
+    notes TEXT,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_incomes_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON DELETE CASCADE
+);
+
+
+CREATE TABLE expenses (
+
+    expense_id BIGSERIAL PRIMARY KEY,
+
+    user_id BIGINT NOT NULL,
+
+    category_id BIGINT NOT NULL,
+
+    amount NUMERIC(18,2) NOT NULL
+        CHECK (amount > 0),
+
+    expense_date DATE NOT NULL,
+
+    payment_method VARCHAR(30) NOT NULL
+        CHECK (
+            payment_method IN (
+                'CASH',
+                'BANK_TRANSFER',
+                'UPI',
+                'DEBIT_CARD',
+                'CREDIT_CARD',
+                'CHEQUE',
+                'OTHER'
+            )
+        ),
+
+    notes TEXT,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_expenses_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_expenses_category
+        FOREIGN KEY (category_id)
+        REFERENCES expense_categories(category_id)
+        ON DELETE RESTRICT
+);
+
+CREATE TABLE budgets (
+
+    budget_id BIGSERIAL PRIMARY KEY,
+
+    user_id BIGINT NOT NULL,
+
+    category_id BIGINT NOT NULL,
+
+    budget_amount NUMERIC(18,2) NOT NULL
+        CHECK (budget_amount > 0),
+
+    budget_month SMALLINT NOT NULL
+        CHECK (budget_month BETWEEN 1 AND 12),
+
+    budget_year SMALLINT NOT NULL
+        CHECK (budget_year >= 2000),
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_budgets_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_budgets_category
+        FOREIGN KEY (category_id)
+        REFERENCES expense_categories(category_id)
+        ON DELETE RESTRICT,
+
+    CONSTRAINT uq_budget_per_month
+        UNIQUE (
+            user_id,
+            category_id,
+            budget_month,
+            budget_year
+        )
+);
+
+
+CREATE TABLE user_subscriptions (
+
+    subscription_id BIGSERIAL PRIMARY KEY,
+
+    user_id BIGINT NOT NULL,
+
+    plan_id BIGINT NOT NULL,
+
+    subscription_start DATE NOT NULL,
+
+    subscription_end DATE NOT NULL,
+
+    auto_renew BOOLEAN NOT NULL DEFAULT FALSE,
+
+    payment_status VARCHAR(20) NOT NULL
+        CHECK (
+            payment_status IN (
+                'PENDING',
+                'PAID',
+                'FAILED',
+                'REFUNDED'
+            )
+        ),
+
+    subscription_status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE'
+        CHECK (
+            subscription_status IN (
+                'ACTIVE',
+                'EXPIRED',
+                'CANCELLED'
+            )
+        ),
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_user_subscription_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_user_subscription_plan
+        FOREIGN KEY (plan_id)
+        REFERENCES subscription_plans(plan_id)
+        ON DELETE RESTRICT,
+
+    CONSTRAINT chk_subscription_dates
+        CHECK (subscription_end >= subscription_start)
+);
+
+
+CREATE TABLE customer_reviews (
+
+    review_id BIGSERIAL PRIMARY KEY,
+
+    user_id BIGINT NOT NULL,
+
+    rating SMALLINT NOT NULL
+        CHECK (rating BETWEEN 1 AND 5),
+
+    review_title VARCHAR(150),
+
+    review_comment TEXT,
+
+    is_anonymous BOOLEAN NOT NULL DEFAULT FALSE,
+
+    review_status VARCHAR(20) NOT NULL DEFAULT 'PUBLISHED'
+        CHECK (
+            review_status IN (
+                'PUBLISHED',
+                'HIDDEN',
+                'REPORTED'
+            )
+        ),
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_customer_reviews_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE technical_indicators (
+
+    technical_indicator_id BIGSERIAL PRIMARY KEY,
+
+    company_id BIGINT NOT NULL,
+
+    file_name VARCHAR(255) NOT NULL,
+
+    file_data BYTEA NOT NULL,
+
+    uploaded_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_technical_indicators_company
+        FOREIGN KEY (company_id)
+        REFERENCES nifty50_companies(company_id)
+        ON DELETE RESTRICT
+);
+
+CREATE TABLE stock_data (
+
+    stock_data_id BIGSERIAL PRIMARY KEY,
+
+    company_id BIGINT NOT NULL,
+
+    file_name VARCHAR(255) NOT NULL,
+
+    file_data BYTEA NOT NULL,
+
+    uploaded_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_stock_data_company
+        FOREIGN KEY (company_id)
+        REFERENCES nifty50_companies(company_id)
+        ON DELETE RESTRICT
+);
+
+CREATE TABLE company_news (
+
+    news_id BIGSERIAL PRIMARY KEY,
+
+    company_id BIGINT NOT NULL,
+
+    headline TEXT NOT NULL,
+
+    publish_date DATE NOT NULL,
+
+    sentiment VARCHAR(20) NOT NULL
+        CHECK (
+            sentiment IN (
+                'POSITIVE',
+                'NEUTRAL',
+                'NEGATIVE'
+            )
+        ),
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_company_news_company
+        FOREIGN KEY (company_id)
+        REFERENCES nifty50_companies(company_id)
+        ON DELETE RESTRICT
+);
+
+CREATE TABLE company_sentiments (
+
+    sentiment_id BIGSERIAL PRIMARY KEY,
+
+    company_id BIGINT NOT NULL,
+
+    sentiment_date DATE NOT NULL,
+
+    sentiment_mean NUMERIC(5,4) NOT NULL,
+
+    sentiment_count INTEGER NOT NULL
+        CHECK (sentiment_count >= 0),
+
+    sentiment_positive INTEGER NOT NULL DEFAULT 0
+        CHECK (sentiment_positive >= 0),
+
+    sentiment_neutral INTEGER NOT NULL DEFAULT 0
+        CHECK (sentiment_neutral >= 0),
+
+    sentiment_negative INTEGER NOT NULL DEFAULT 0
+        CHECK (sentiment_negative >= 0),
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_company_sentiments_company
+        FOREIGN KEY (company_id)
+        REFERENCES nifty50_companies(company_id)
+        ON DELETE RESTRICT,
+
+    CONSTRAINT uq_company_sentiment_date
+        UNIQUE (
+            company_id,
+            sentiment_date
+        )
+);
+
+CREATE TABLE audit_logs (
+
+    audit_id BIGSERIAL PRIMARY KEY,
+
+    user_id BIGINT NOT NULL,
+
+    module_name VARCHAR(50) NOT NULL,
+
+    table_name VARCHAR(100) NOT NULL,
+
+    record_id BIGINT NOT NULL,
+
+    action VARCHAR(20) NOT NULL
+        CHECK (
+            action IN (
+                'INSERT',
+                'UPDATE',
+                'DELETE'
+            )
+        ),
+
+    old_data JSONB,
+
+    new_data JSONB,
+
+    description TEXT,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_audit_logs_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON DELETE RESTRICT
+);
+

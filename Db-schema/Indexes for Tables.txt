@@ -1,0 +1,118 @@
+CREATE INDEX idx_nifty50_sector
+ON nifty50_companies(sector);
+CREATE INDEX idx_users_email
+ON users(email);
+
+CREATE INDEX idx_users_mobile
+ON users(mobile_number);
+
+CREATE INDEX idx_users_status
+ON users(account_status);
+CREATE INDEX idx_otp_user
+ON otp_verifications(user_id);
+
+CREATE INDEX idx_otp_expires
+ON otp_verifications(expires_at);
+
+CREATE INDEX idx_social_user
+ON social_logins(user_id);
+
+CREATE INDEX idx_session_user
+ON user_sessions(user_id);
+
+CREATE INDEX idx_session_active
+ON user_sessions(is_active);
+
+CREATE INDEX idx_session_login
+ON user_sessions(login_time);
+
+CREATE INDEX idx_goals_user
+ON goals(user_id);
+
+CREATE INDEX idx_goals_status
+ON goals(goal_status);
+
+CREATE INDEX idx_goals_target_date
+ON goals(target_date);
+
+CREATE INDEX idx_goals_investment
+ON goals(investment_type_id);
+
+CREATE INDEX idx_goal_progress_goal
+ON goal_progress(goal_id);
+
+CREATE INDEX idx_goal_progress_date
+ON goal_progress(progress_date);
+
+CREATE INDEX idx_income_user
+ON incomes(user_id);
+
+CREATE INDEX idx_income_date
+ON incomes(income_date);
+
+CREATE INDEX idx_expense_user
+ON expenses(user_id);
+
+CREATE INDEX idx_expense_category
+ON expenses(category_id);
+
+CREATE INDEX idx_expense_date
+ON expenses(expense_date);
+
+CREATE INDEX idx_budget_user
+ON budgets(user_id);
+
+CREATE INDEX idx_budget_category
+ON budgets(category_id);
+
+CREATE INDEX idx_subscription_user
+ON user_subscriptions(user_id);
+
+CREATE INDEX idx_subscription_plan
+ON user_subscriptions(plan_id);
+
+CREATE INDEX idx_subscription_status
+ON user_subscriptions(subscription_status);
+
+CREATE INDEX idx_review_user
+ON customer_reviews(user_id);
+
+CREATE INDEX idx_review_rating
+ON customer_reviews(rating);
+
+CREATE INDEX idx_stock_company
+ON stock_data(company_id);
+
+CREATE INDEX idx_technical_company
+ON technical_indicators(company_id);
+
+CREATE INDEX idx_news_company
+ON company_news(company_id);
+
+CREATE INDEX idx_news_date
+ON company_news(publish_date);
+
+CREATE INDEX idx_news_sentiment
+ON company_news(sentiment);
+
+CREATE INDEX idx_sentiment_company
+ON company_sentiments(company_id);
+
+CREATE INDEX idx_sentiment_date
+ON company_sentiments(sentiment_date);
+
+CREATE INDEX idx_audit_user
+ON audit_logs(user_id);
+
+CREATE INDEX idx_audit_module
+ON audit_logs(module_name);
+
+CREATE INDEX idx_audit_table
+ON audit_logs(table_name);
+
+CREATE INDEX idx_audit_record
+ON audit_logs(record_id);
+
+CREATE INDEX idx_audit_created
+ON audit_logs(created_at);
+
