@@ -1,0 +1,75 @@
+.plan {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  position: relative;
+  animation: gp-rise 0.5s ease both;
+}
+
+.plan--featured {
+  border-color: rgba(63, 106, 255, 0.55);
+  box-shadow: 0 0 0 1px rgba(63, 106, 255, 0.25), 0 22px 60px -30px rgba(63, 106, 255, 0.7);
+}
+
+.plan__badge {
+  position: absolute;
+  top: -12px;
+  right: 20px;
+  background: var(--gp-accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border-radius: 999px;
+}
+
+.plan__name {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--gp-text);
+}
+
+.plan__price {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.plan__price .gp-mono {
+  font-size: 34px;
+  font-weight: 700;
+  color: var(--gp-text);
+}
+
+.plan__period {
+  color: var(--gp-text-dim);
+  font-size: 14px;
+}
+
+.plan__features {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.plan__features li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--gp-text-soft);
+  font-size: 14px;
+}
+
+.plan__features li svg {
+  color: var(--gp-green);
+  flex-shrink: 0;
+}
+
+.plan__cta {
+  width: 100%;
+  justify-content: center;
+}

@@ -1,0 +1,46 @@
+.sparkline {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sparkline__svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+.sparkline__line {
+  stroke-dasharray: 300;
+  stroke-dashoffset: 300;
+  animation: gp-draw 1.6s var(--ease) forwards;
+}
+
+.sparkline__area {
+  opacity: 0;
+  animation: gp-fade-in 1.2s ease forwards;
+  animation-delay: 0.5s;
+}
+
+.sparkline__dot {
+  opacity: 0;
+  animation: gp-fade-in 0.4s ease forwards;
+  animation-delay: 1.2s;
+}
+
+.sparkline__labels {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-3);
+  padding: 0 2px;
+}
+
+@keyframes gp-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}

@@ -1,0 +1,4 @@
+import { useNavigate } from 'react-router-dom'
+import { AuthStage, Brand, CloseButton } from '../components/AuthUI'
+
+export default function Signup(){const navigate=useNavigate();return <AuthStage modal><CloseButton onClick={()=>navigate('/')}/><Brand/><h1>Create an Account</h1><p className="auth-subtitle">Start your journey to learn global markets and trading.</p><div className="signup-options"><button className="primary-button" onClick={()=>navigate('/verify-phone')}>Continue with Mobile Number</button><button className="google-button" onClick={()=>navigate('/complete-account')}><b aria-hidden="true">G</b> Continue with Google</button></div><div className="or"><span/>OR<span/></div><p className="auth-footer">Already have an account? <button className="link-button" onClick={()=>navigate('/login')}>Log in</button></p></AuthStage>}
