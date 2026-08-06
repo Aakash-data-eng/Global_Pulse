@@ -94,4 +94,5 @@ def get_current_firebase_user(
             detail=str(err),
             headers={"WWW-Authenticate": "Bearer"},
         )
+# comment added 
 # comment added
