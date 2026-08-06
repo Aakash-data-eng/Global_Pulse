@@ -1,4 +1,4 @@
-import Sparkline from "../../../../components/Sparkline/Sparkline.jsx"
+import Sparkline from "../../../../components/common/Sparkline/Sparkline.jsx"
 
 export default function MarketCard({ item, series, style }) {
   const color = item.positive ? "var(--green)" : "var(--red)"

@@ -1,20 +1,28 @@
 .goals-page {
   color: #e6eefc;
+  width: 100%;
+  max-height: calc(100vh - 70px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
 }
 .goals-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 6rem 2rem;
+  padding: 1.5rem 2rem 3rem 2rem;
+  min-height: calc(100vh - 140px);
   text-align: center;
 }
 .goals-empty h2 {
-  font-size: 2.4rem;
+  font-size: 2rem;
   margin-top: 1rem;
 }
 .goals-empty p {
-  margin-top: 1rem;
+  margin-top: 0.5rem;
   color: #b8c7e6;
 }
 .set-goal-btn {

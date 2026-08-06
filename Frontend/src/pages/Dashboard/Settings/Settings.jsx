@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { Settings as SettingsIcon, Bell, Moon, Globe, Shield, CreditCard } from "lucide-react"
 
-import PageHeader from "../../../components/PageHeader/PageHeader.jsx"
+import PageHeader from "../../../components/common/PageHeader/PageHeader.jsx"
 import "../../../styles/page.css"
 import "./Settings.css"
 

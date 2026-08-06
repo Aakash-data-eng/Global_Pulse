@@ -29,9 +29,11 @@
   .shell__content {
     margin-left: var(--sidebar-w);
   }
+
   .shell--sidebar-open .shell__content {
     margin-left: var(--sidebar-w);
   }
+
   .shell__content-inner {
     padding: 16px 16px 40px;
   }

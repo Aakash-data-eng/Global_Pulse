@@ -1,16 +1,24 @@
-export default function TopMovers({ movers, style }) {
+import { useNavigate } from "react-router-dom"
+
+export default function TopMovers({ movers, data, style, onViewAll }) {
+  const navigate = useNavigate()
+  const list = movers || data || []
+  const handleViewAll = onViewAll || (() => navigate("/dashboard/constituents"))
+
   return (
     <aside className="movers card-appear" style={style} aria-label="Top movers in India">
       <header className="movers__head">
         <h3 className="movers__title">Top Movers (India)</h3>
-        <button className="movers__viewall">VIEW ALL</button>
+        <button className="movers__viewall" onClick={handleViewAll}>
+          VIEW ALL
+        </button>
       </header>
 
       <ul className="movers__list">
-        {movers.map((m) => (
-          <li key={m.id} className="movers__row">
+        {list.map((m, i) => (
+          <li key={m.id + "-" + i} className="movers__row">
             <span className="movers__logo" aria-hidden="true">
-              {m.name.charAt(0)}
+              {m.name ? m.name.charAt(0) : "M"}
             </span>
             <div className="movers__info">
               <span className="movers__name">{m.name}</span>

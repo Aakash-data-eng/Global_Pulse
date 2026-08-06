@@ -4,12 +4,17 @@ import { GoalsContext } from "../../goalsContext.jsx"
 
 export default function DeleteConfirmation({ onClose }) {
   const { selected, deleteGoal } = useContext(GoalsContext)
-  const ref = useRef(null)
-  useEffect(()=>{
-    function onKey(e){ if (e.key === "Escape") onClose() }
+  const modalRef = useRef(null)
+
+  useEffect(() => {
+    document.body.classList.add("modal-open")
+    function onKey(e) { if (e.key === "Escape") onClose() }
     document.addEventListener("keydown", onKey)
-    return ()=>document.removeEventListener("keydown", onKey)
-  },[onClose])
+    return () => {
+      document.body.classList.remove("modal-open")
+      document.removeEventListener("keydown", onKey)
+    }
+  }, [onClose])
 
   if (!selected) return null
 
@@ -20,12 +25,17 @@ export default function DeleteConfirmation({ onClose }) {
 
   return (
     <div className="dc-overlay">
-      <div className="dc-box" role="dialog" aria-modal="true" ref={ref}>
-        <h3>Confirm Delete</h3>
-        <p>Are you sure you want to delete <strong>{selected.name}</strong>?</p>
+      <div className="dc-box" role="dialog" aria-modal="true" ref={modalRef}>
+        <div className="dc-head">
+          <h2 className="dc-title">Confirm Delete</h2>
+        </div>
         <div className="dc-actions">
-          <button className="btn-muted" onClick={onClose}>Cancel</button>
-          <button className="btn-danger" onClick={confirm}>Delete Goal</button>
+          <button type="button" className="dc-btn dc-btn--cancel" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="button" className="dc-btn dc-btn--delete" onClick={confirm}>
+            Confirm Delete
+          </button>
         </div>
       </div>
     </div>
