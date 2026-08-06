@@ -279,14 +279,22 @@ def verify_otp(
     request: VerifyOTPRequest,
     db: Session = Depends(get_db),
 ):
+    # Normalize phone numbers with/without country code
+    clean_id = request.identifier.replace("+91", "").strip() if request.identifier else ""
+    full_id = f"+91{clean_id}" if request.identifier and not request.identifier.startswith("+") else request.identifier
+
+    id_match = [
+        OTPVerification.mobile_number == request.identifier,
+        OTPVerification.mobile_number == full_id,
+        OTPVerification.mobile_number == clean_id,
+        OTPVerification.email == request.identifier,
+    ]
+
     # TC-18, TC-21: Check if this OTP code was already used/verified
     already_used = (
         db.query(OTPVerification)
         .filter(
-            or_(
-                OTPVerification.mobile_number == request.identifier,
-                OTPVerification.email == request.identifier,
-            ),
+            or_(*id_match),
             OTPVerification.otp_code == request.otp_code,
             OTPVerification.is_verified == True,
         )
@@ -304,12 +312,7 @@ def verify_otp(
     if request.firebase_verified or request.otp_code == "123456":
         otp_record = (
             db.query(OTPVerification)
-            .filter(
-                or_(
-                    OTPVerification.mobile_number == request.identifier,
-                    OTPVerification.email == request.identifier,
-                )
-            )
+            .filter(or_(*id_match))
             .order_by(OTPVerification.otp_id.desc())
             .first()
         )
@@ -329,32 +332,14 @@ def verify_otp(
         otp_record = (
             db.query(OTPVerification)
             .filter(
-                or_(
-                    OTPVerification.mobile_number == request.identifier,
-                    OTPVerification.email == request.identifier,
-                ),
+                or_(*id_match),
                 OTPVerification.otp_code == request.otp_code,
                 OTPVerification.is_verified == False,
             )
             .order_by(OTPVerification.otp_id.desc())
             .first()
         )
-        if not otp_record:
-            # Fallback: check most recent unverified OTP session for mobile number
-            otp_record = (
-                db.query(OTPVerification)
-                .filter(
-                    or_(
-                        OTPVerification.mobile_number == request.identifier,
-                        OTPVerification.email == request.identifier,
-                    ),
-                    OTPVerification.is_verified == False,
-                )
-                .order_by(OTPVerification.otp_id.desc())
-                .first()
-            )
-
-    if not otp_record and not request.firebase_verified and request.otp_code != "123456":
+    if not otp_record:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired OTP code.",

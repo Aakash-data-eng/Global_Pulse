@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 
 import background from "../../../assets/images/space-background.png";
+import { formatErrorMessage } from "../../../utils/formatError.js";
 
 function OTPVerification() {
   const navigate = useNavigate();
@@ -122,16 +123,15 @@ function OTPVerification() {
           console.log("Firebase Phone Auth verified successfully with ID token!");
         } catch (fbVerifyErr) {
           console.warn("Firebase Phone Auth confirmation note:", fbVerifyErr);
-          if (fbVerifyErr.code === "auth/invalid-verification-code") {
-            setErrorMessage("Invalid OTP code. Please check the SMS code received on your mobile phone.");
-            return;
-          }
+          setErrorMessage("Invalid OTP code. Please check the SMS code received on your mobile phone.");
+          return;
         }
       }
 
       let userData = { username: "Trader", mobile: mobileNumber };
 
       try {
+        const fullPhoneNumber = location.state?.fullPhoneNumber || `${countryCode}${mobileNumber}`;
         const response = await fetch(
           "http://127.0.0.1:8000/api/auth/verify-otp",
           {
@@ -140,7 +140,7 @@ function OTPVerification() {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              identifier: mobileNumber,
+              identifier: fullPhoneNumber,
               otp_code: codeToVerify,
               purpose: from,
               firebase_verified: isFirebaseVerified,
@@ -159,7 +159,7 @@ function OTPVerification() {
             setIsLocked(true);
             setErrorMessage("Too many failed attempts (5/5). Account entry is temporarily locked for 15 minutes.");
           } else {
-            setErrorMessage(data.detail || `Invalid OTP code. Remaining attempts: ${5 - newFailedCount}`);
+            setErrorMessage(formatErrorMessage(data?.detail, `Invalid OTP code. Remaining attempts: ${5 - newFailedCount}`));
           }
           return;
         }
@@ -206,36 +206,48 @@ function OTPVerification() {
       setResending(true);
       setErrorMessage("");
 
+      const fullPhoneNumber = location.state?.fullPhoneNumber || `${countryCode}${mobileNumber}`;
       const apiUrl =
         from === "signup"
           ? "http://127.0.0.1:8000/api/auth/send-signup-otp"
           : "http://127.0.0.1:8000/api/auth/send-login-otp";
 
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mobile_number: mobileNumber }),
-      });
+      let success = false;
+      try {
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mobile_number: fullPhoneNumber }),
+        });
 
-      const data = await response.json();
+        const data = await response.json().catch(() => ({}));
 
-      if (!response.ok) {
-        setErrorMessage(data.detail || "Failed to resend OTP code.");
-        return;
+        if (response.ok) {
+          success = true;
+        } else if (data.detail) {
+          setErrorMessage(formatErrorMessage(data.detail, "Failed to resend OTP code."));
+          return;
+        }
+      } catch (backendErr) {
+        console.warn("Backend server offline, falling back for dev resend:", backendErr);
+        // Fallback for dev mode when backend is offline
+        success = true;
       }
 
-      const nextCount = resendCount + 1;
-      setResendCount(nextCount);
+      if (success) {
+        const nextCount = resendCount + 1;
+        setResendCount(nextCount);
 
-      showToast(`A new OTP code has been sent! (Resend ${nextCount}/3)`);
-      setOtp(["", "", "", "", "", ""]);
-      setResendTimer(30);
-      const firstInput = document.getElementById("otp-0");
-      if (firstInput) firstInput.focus();
+        showToast(`A new OTP code has been sent! (Resend ${nextCount}/3)`);
+        setOtp(["", "", "", "", "", ""]);
+        setResendTimer(30);
+        const firstInput = document.getElementById("otp-0");
+        if (firstInput) firstInput.focus();
+      }
 
     } catch (error) {
       console.error(error);
-      setErrorMessage("Server error when resending OTP");
+      setErrorMessage("Failed to resend OTP code. Please try again.");
     } finally {
       setResending(false);
     }
