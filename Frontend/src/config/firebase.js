@@ -2,13 +2,13 @@ import { initializeApp } from "firebase/app";
 import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAl_ADzvszn-x0t0ZaxO89brx1Oo5IWRA0",
-  authDomain: "globalpulse-c4870.firebaseapp.com",
-  projectId: "globalpulse-c4870",
-  storageBucket: "globalpulse-c4870.firebasestorage.app",
-  messagingSenderId: "438768082415",
-  appId: "1:438768082415:web:fb65572341c1d2f9adea1a",
-  measurementId: "G-YVVXSLGSFF"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 const app = initializeApp(firebaseConfig);
