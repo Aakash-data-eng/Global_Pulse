@@ -71,6 +71,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.firebase_config import verify_firebase_token
 
+# Security dependency for extracting and verifying Firebase Bearer Token from HTTP Authorization Header
 security = HTTPBearer(auto_error=False)
 
 def get_current_firebase_user(
@@ -93,4 +94,4 @@ def get_current_firebase_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=str(err),
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        )
