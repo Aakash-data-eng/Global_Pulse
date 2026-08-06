@@ -9,6 +9,9 @@ load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
 
+
+#New Branch Created --- Sample Branch
+
 password_context = CryptContext(
     schemes=["bcrypt"],
     deprecated="auto"
@@ -93,4 +96,4 @@ def get_current_firebase_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=str(err),
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        )
