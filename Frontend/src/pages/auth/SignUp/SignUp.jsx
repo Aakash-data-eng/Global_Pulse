@@ -1,5 +1,5 @@
 import "./SignUp.css";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useGoogleLogin } from "@react-oauth/google";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
@@ -9,6 +9,7 @@ import background from "../../../assets/images/space-background.png";
 
 function SignUp({ isModal = false, onClose }) {
   const navigate = useNavigate();
+  const [alertMessage, setAlertMessage] = useState("");
 
   const handleClose = () => {
     if (onClose) {
@@ -31,6 +32,7 @@ function SignUp({ isModal = false, onClose }) {
   const googleSignup = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
+        setAlertMessage("");
         const response = await axios.post(
           "http://127.0.0.1:8000/api/auth/google-login",
           {
@@ -50,7 +52,10 @@ function SignUp({ isModal = false, onClose }) {
             },
           });
         } else {
-          navigate("/login-success");
+          setAlertMessage("Account already exists with this Google email. Logging you in...");
+          setTimeout(() => {
+            navigate("/login-success");
+          }, 1200);
         }
       } catch (error) {
         console.error("AXIOS ERROR:", error);
@@ -59,23 +64,24 @@ function SignUp({ isModal = false, onClose }) {
       }
     },
     onError: () => {
-      alert("Google Login Failed");
+      setAlertMessage("Google Login Failed. Please try again.");
     },
   });
 
   const cardContent = (
     <div className="signup-card" onClick={(e) => e.stopPropagation()}>
-      {/* Header */}
+      <button
+        className="close-btn"
+        type="button"
+        onClick={handleClose}
+        aria-label="Close modal"
+      >
+        &times;
+      </button>
+
+      {/* Header Logo */}
       <div className="signup-header">
         <img src={logo} alt="GlobalPulse" className="signup-logo" />
-        <button
-          className="close-btn"
-          type="button"
-          onClick={handleClose}
-          aria-label="Close modal"
-        >
-          &times;
-        </button>
       </div>
 
       {/* Title */}
@@ -84,6 +90,24 @@ function SignUp({ isModal = false, onClose }) {
       <p className="signup-subtitle">
         Start your journey to learn global markets and trading.
       </p>
+
+      {alertMessage && (
+        <div
+          style={{
+            background: "rgba(59, 130, 246, 0.15)",
+            border: "1px solid rgba(59, 130, 246, 0.4)",
+            color: "#60a5fa",
+            borderRadius: "8px",
+            padding: "10px 14px",
+            fontSize: "13px",
+            fontWeight: "600",
+            marginBottom: "14px",
+            textAlign: "center",
+          }}
+        >
+          {alertMessage}
+        </div>
+      )}
 
       {/* Continue with Mobile */}
       <button
@@ -95,7 +119,7 @@ function SignUp({ isModal = false, onClose }) {
           })
         }
       >
-        Continue with Mobile Number
+        Continue with <strong>Mobile Number</strong>
       </button>
 
       {/* Continue with Google */}
@@ -122,7 +146,7 @@ function SignUp({ isModal = false, onClose }) {
 
       {/* Bottom */}
       <div className="login-text">
-        Already have an account? <Link to="/login">Log In</Link>
+        Already have an account? <Link to="/login">Log in</Link>
       </div>
     </div>
   );

@@ -27,6 +27,18 @@ function OTPVerification() {
   // TC-16: Maximum 3 resend attempts per 10 minutes business rule
   const [resendCount, setResendCount] = useState(0);
 
+  // Sending status - disable inputs until OTP reaches device
+  const [sendingOtp, setSendingOtp] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSendingOtp(false);
+      const firstInput = document.getElementById("otp-0");
+      if (firstInput) firstInput.focus();
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
   // TC-15: Countdown timer for Resend OTP
   useEffect(() => {
     let timer;
@@ -264,23 +276,24 @@ function OTPVerification() {
       }}
     >
       <div className="otp-card">
-        {/* TC-01: Top-left back button */}
-        <button
-          type="button"
-          className="back-btn"
-          onClick={() => navigate(-1)}
-          aria-label="Back"
-        >
-          ← Back
-        </button>
+        {/* Header matching SignUp & VerifyPhone header slot */}
+        <div className="otp-header">
+          <button
+            type="button"
+            className="back-btn"
+            onClick={() => navigate("/verify-phone", { state: { from, mobileNumber, countryCode } })}
+            aria-label="Back to Verify Phone"
+          >
+            ← Back
+          </button>
+        </div>
 
-        {/* TC-02: Page title */}
+        {/* Page title */}
         <h1 className="otp-title">Enter OTP</h1>
 
-        {/* TC-03: Subtitle with registered phone number */}
+        {/* Subtitle */}
         <p className="otp-subtitle">
-          Enter the 6-digit verification code sent to
-          <br />
+          Enter the 6-digit verification code sent to{" "}
           <strong style={{ color: "#ffffff" }}>{countryCode} {mobileNumber}</strong>
         </p>
 
@@ -322,6 +335,13 @@ function OTPVerification() {
           </div>
         )}
 
+        {sendingOtp && (
+          <div className="otp-sending-banner">
+            <div className="sending-spinner"></div>
+            <span>Sending verification code to <strong>{countryCode} {mobileNumber}</strong>...</span>
+          </div>
+        )}
+
         {/* TC-04: 6 individual single-digit input boxes */}
         <div className="otp-boxes" onPaste={handlePaste}>
           {otp.map((digit, index) => (
@@ -333,10 +353,14 @@ function OTPVerification() {
               inputMode="numeric"
               maxLength="1"
               value={digit}
-              disabled={isLocked}
+              disabled={sendingOtp || isLocked || loading}
               onChange={(e) => handleChange(e.target.value, index)}
               onKeyDown={(e) => handleKeyDown(e, index)}
               className="otp-input"
+              style={{
+                opacity: sendingOtp || isLocked ? 0.4 : 1,
+                cursor: sendingOtp || isLocked ? "not-allowed" : "text",
+              }}
               aria-label={`OTP Digit ${index + 1}`}
             />
           ))}

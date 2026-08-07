@@ -28,6 +28,7 @@ from app.schemas import (
     LogoutRequest,
     CompleteProfileRequest,
     GoogleLoginRequest,
+    GoogleSignupCompleteRequest,
     FirebaseLoginRequest,
     MessageResponse,
     UserResponse,
@@ -174,17 +175,27 @@ def send_signup_otp(
     request: SendOTPRequest,
     db: Session = Depends(get_db),
 ):
+    clean_digits = "".join(filter(str.isdigit, request.mobile_number or ""))[-10:]
+
     # Check if mobile already exists in users table (TC-20)
-    existing_user = (
-        db.query(User)
-        .filter(User.mobile_number == request.mobile_number)
-        .first()
-    )
+    existing_user = None
+    if clean_digits:
+        existing_user = (
+            db.query(User)
+            .filter(
+                or_(
+                    User.mobile_number == request.mobile_number,
+                    User.mobile_number == clean_digits,
+                    User.mobile_number.like(f"%{clean_digits}"),
+                )
+            )
+            .first()
+        )
 
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Mobile number is already registered. Please log in."
+            detail="Mobile number already exists. Please log in."
         )
 
     # Delete previous unverified OTPs for this number
@@ -210,8 +221,12 @@ def send_signup_otp(
     db.commit()
     db.refresh(otp_record)
 
-    # Dispatch Real SMS via Fast2SMS
+    # Dispatch Real SMS via Fast2SMS (if key provided)
     sms_sent = send_real_sms_otp(request.mobile_number, otp)
+
+    # Dispatch Real Email OTP via Gmail SMTP to configured SMTP_EMAIL
+    smtp_recipient = os.getenv("SMTP_EMAIL", "elakiyajg25@gmail.com")
+    send_real_email_otp(smtp_recipient, otp, f"Mobile Verification ({request.mobile_number})")
 
     return {
         "message": "OTP Sent Successfully",
@@ -260,8 +275,12 @@ def send_login_otp(
     db.commit()
     db.refresh(otp_record)
 
-    # Dispatch Real SMS via Fast2SMS
+    # Dispatch Real SMS via Fast2SMS (if key provided)
     sms_sent = send_real_sms_otp(request.mobile_number, otp)
+
+    # Dispatch Real Email OTP via Gmail SMTP to configured SMTP_EMAIL
+    smtp_recipient = os.getenv("SMTP_EMAIL", "elakiyajg25@gmail.com")
+    send_real_email_otp(smtp_recipient, otp, f"Mobile Login Verification ({request.mobile_number})")
 
     return {
         "message": "OTP Sent Successfully",
@@ -346,11 +365,13 @@ def verify_otp(
         )
 
     # TC-12, TC-16: Check expiration (5 minutes)
-    if otp_record and otp_record.expires_at and otp_record.expires_at < datetime.now(timezone.utc):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="OTP code has expired. Please request a new code.",
-        )
+    if otp_record and otp_record.expires_at:
+        now = datetime.now(timezone.utc) if otp_record.expires_at.tzinfo else datetime.utcnow()
+        if otp_record.expires_at < now:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="OTP code has expired. Please request a new code.",
+            )
 
     # Mark OTP verified in DB
     otp_record.is_verified = True
@@ -364,12 +385,18 @@ def verify_otp(
         }
 
     # LOGIN FLOW: Retrieve user and issue token session
+    clean_id = request.identifier.replace("+91", "").replace("+", "").strip() if request.identifier else ""
+    full_id = f"+91{clean_id}"
+
     user = (
         db.query(User)
         .filter(
             or_(
                 User.mobile_number == request.identifier,
-                User.email == request.identifier,
+                User.mobile_number == full_id,
+                User.mobile_number == clean_id,
+                User.mobile_number.like(f"%{clean_id}"),
+                func.lower(User.email) == request.identifier.lower(),
             )
         )
         .first()
@@ -378,7 +405,7 @@ def verify_otp(
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User profile not found.",
+            detail="User profile not found. Please sign up.",
         )
 
     user.is_mobile_verified = True
@@ -420,37 +447,54 @@ def signup(
     request: SignupRequest,
     db: Session = Depends(get_db),
 ):
-    # Check duplicate email, username, or mobile
-    existing_user = (
-        db.query(User)
-        .filter(
-            or_(
-                User.email == request.email.lower(),
-                User.username == request.username,
-                User.mobile_number == request.mobile_number,
-            )
-        )
-        .first()
+    final_email = (
+        request.email.lower()
+        if request.email and request.email.strip()
+        else f"{request.mobile_number or 'user'}@mobile.globalpulse"
     )
 
-    if existing_user:
+    # Check duplicate email, username, or mobile
+    clean_mobile = "".join(filter(str.isdigit, request.mobile_number or ""))[-10:] if request.mobile_number else ""
+
+    existing_uname = db.query(User).filter(func.lower(User.username) == request.username.lower()).first()
+    if existing_uname:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Username, Email, or Mobile Number already registered.",
+            detail="Username is already taken.",
         )
+
+    existing_email = db.query(User).filter(func.lower(User.email) == final_email.lower()).first()
+    if existing_email:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email already exists. Please log in.",
+        )
+
+    if clean_mobile:
+        existing_mobile = db.query(User).filter(
+            or_(
+                User.mobile_number == request.mobile_number,
+                User.mobile_number.like(f"%{clean_mobile}"),
+            )
+        ).first()
+        if existing_mobile:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Mobile number already exists. Please log in.",
+            )
 
     # Hash password using Bcrypt
     hashed_pwd = hash_password(request.password)
 
     new_user = User(
         username=request.username,
-        email=request.email.lower(),
+        email=final_email,
         mobile_number=request.mobile_number,
         password_hash=hashed_pwd,
         auth_provider="LOCAL",
         account_status="ACTIVE",
         is_mobile_verified=True,
-        is_email_verified=True,
+        is_email_verified=True if request.email else False,
         last_login_at=datetime.now(timezone.utc),
     )
 
@@ -579,6 +623,76 @@ def complete_profile(
     }
 
 
+@router.post("/google-signup-complete")
+def google_signup_complete(
+    request: GoogleSignupCompleteRequest,
+    db: Session = Depends(get_db),
+):
+    email_clean = request.email.strip().lower()
+    username_clean = request.username.strip()
+
+    existing_username = db.query(User).filter(User.username == username_clean).first()
+    if existing_username:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username is already taken.",
+        )
+
+    user = db.query(User).filter(User.email == email_clean).first()
+
+    if user:
+        user.username = username_clean
+        user.password_hash = hash_password(request.password)
+        user.account_status = "ACTIVE"
+        user.last_login_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(user)
+    else:
+        user = User(
+            username=username_clean,
+            email=email_clean,
+            password_hash=hash_password(request.password),
+            auth_provider="GOOGLE",
+            account_status="ACTIVE",
+            is_email_verified=True,
+            last_login_at=datetime.now(timezone.utc),
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+        sub = UserSubscription(
+            user_id=user.user_id,
+            plan_name="Starter",
+            subscription_status="ACTIVE",
+            payment_status="PAID",
+        )
+        db.add(sub)
+        db.commit()
+
+    access_token = create_access_token(
+        {"user_id": user.user_id, "email": user.email}
+    )
+
+    session = UserSession(
+        user_id=user.user_id,
+        access_token=access_token,
+        is_active=True,
+    )
+    db.add(session)
+    db.commit()
+
+    return {
+        "message": "Google Account Completed Successfully",
+        "access_token": access_token,
+        "user": {
+            "user_id": user.user_id,
+            "username": user.username,
+            "email": user.email,
+        },
+    }
+
+
 # ==========================================================
 # 5. USER LOGIN
 # ==========================================================
@@ -588,17 +702,20 @@ def login(
     request: LoginRequest,
     db: Session = Depends(get_db),
 ):
-    # Find user by Email OR Username
-    user = (
-        db.query(User)
-        .filter(
-            or_(
-                User.email == request.email.lower(),
-                User.username == request.email,
-            )
-        )
-        .first()
-    )
+    # Find user by Email, Username, or Mobile Number (Case-insensitive)
+    req_input = request.email.strip()
+    req_lower = req_input.lower()
+    clean_digits = "".join(filter(str.isdigit, req_input))[-10:] if any(c.isdigit() for c in req_input) else ""
+
+    filters = [
+        func.lower(User.email) == req_lower,
+        func.lower(User.username) == req_lower,
+        User.mobile_number == req_input,
+    ]
+    if clean_digits:
+        filters.append(User.mobile_number.like(f"%{clean_digits}"))
+
+    user = db.query(User).filter(or_(*filters)).first()
 
     if not user:
         raise HTTPException(
@@ -929,11 +1046,13 @@ def verify_forgot_otp(
         )
 
     # TC-28: Check 10 minute expiration
-    if otp_record.expires_at and otp_record.expires_at < datetime.now(timezone.utc):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Verification code has expired. Please request a new code.",
-        )
+    if otp_record and otp_record.expires_at:
+        now = datetime.now(timezone.utc) if otp_record.expires_at.tzinfo else datetime.utcnow()
+        if otp_record.expires_at < now:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Verification code has expired. Please request a new code.",
+            )
 
     otp_record.is_verified = True
     otp_record.verified_at = datetime.now(timezone.utc)

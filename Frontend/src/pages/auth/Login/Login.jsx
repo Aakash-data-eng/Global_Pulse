@@ -6,6 +6,7 @@ import { Eye, EyeOff } from "lucide-react";
 
 import logo from "../../../assets/images/logo.png";
 import background from "../../../assets/images/space-background.png";
+import { formatErrorMessage } from "../../../utils/formatError.js";
 
 function Login() {
   const navigate = useNavigate();
@@ -98,7 +99,7 @@ function Login() {
         navigate("/login-success", { replace: true });
       } else {
         // TC-09, TC-10: Invalid Username or Password error message
-        setErrorMessage(data.detail || "Invalid Username or Password.");
+        setErrorMessage(formatErrorMessage(data?.detail, "Invalid Username or Password."));
       }
     } catch (err) {
       console.error(err);
@@ -109,8 +110,19 @@ function Login() {
     }
   };
 
-  // TC-19, TC-20: Button disabled when empty, active when filled
-  const isButtonEnabled = identifier.trim().length > 0 && password.length > 0 && !loading;
+  // TC-13, TC-19: Password policy validation (>= 6 chars, contains letters and numbers)
+  const isPasswordValid = (pwd) => {
+    if (!pwd || pwd.length < 6) return false;
+    const hasLetter = /[a-zA-Z]/.test(pwd);
+    const hasNumber = /[0-9]/.test(pwd);
+    return hasLetter && hasNumber;
+  };
+
+  // TC-19, TC-20: Button disabled when empty or weak password, active in blue when strong/valid
+  const isButtonEnabled =
+    identifier.trim().length >= 3 &&
+    isPasswordValid(password) &&
+    !loading;
 
   return (
     <div
@@ -120,21 +132,22 @@ function Login() {
       }}
     >
       <div className="login-card">
+        <button
+          className="close-btn"
+          type="button"
+          onClick={() => navigate("/")}
+          aria-label="Close"
+        >
+          &times;
+        </button>
+
         {/* Header */}
         <div className="login-header">
           <img src={logo} alt="GlobalPulse" className="login-logo" />
-          <button
-            className="close-btn"
-            type="button"
-            onClick={() => navigate("/")}
-            aria-label="Close"
-          >
-            &times;
-          </button>
         </div>
 
         {/* Title */}
-        <h1 className="login-title">Welcome Back</h1>
+        <h1 className="login-title">Welcome Back!</h1>
         <p className="login-subtitle">
           Log in to continue your trading journey.
         </p>
@@ -149,7 +162,7 @@ function Login() {
             })
           }
         >
-          Continue with Mobile Number
+          Continue with <strong>Mobile Number</strong>
         </button>
 
         {/* Google Login */}
@@ -257,18 +270,14 @@ function Login() {
             className="login-submit-btn"
             disabled={!isButtonEnabled}
             tabIndex={4}
-            style={{
-              opacity: isButtonEnabled ? 1 : 0.5,
-              cursor: isButtonEnabled ? "pointer" : "not-allowed",
-            }}
           >
-            {loading ? "Logging in..." : "Login"}
+            {loading ? "Logging in..." : "Log in"}
           </button>
         </form>
 
         {/* TC-02, TC-24: Create Account Link */}
         <div className="signup-text">
-          Already have an account? <Link to="/login">Log in</Link> | Don't have an account? <Link to="/signup" tabIndex={5}>Create Account</Link>
+          Don't have an account? <Link to="/signup" tabIndex={5}>Create Account</Link>
         </div>
       </div>
     </div>

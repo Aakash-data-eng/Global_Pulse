@@ -15,12 +15,15 @@ Base.metadata.create_all(bind=engine)
 
 with engine.connect() as conn:
     try:
-        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS firebase_uid VARCHAR(128);"))
-        conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_users_firebase_uid ON users (firebase_uid);"))
-        conn.execute(text("ALTER TABLE otp_verifications ALTER COLUMN mobile_number TYPE VARCHAR(255);"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN firebase_uid VARCHAR(128);"))
         conn.commit()
-    except Exception as err:
-        print(f"[DB Migration Note] {err}")
+    except Exception:
+        pass
+    try:
+        conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_users_firebase_uid ON users (firebase_uid);"))
+        conn.commit()
+    except Exception:
+        pass
 
 
 app = FastAPI(

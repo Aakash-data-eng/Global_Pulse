@@ -9,7 +9,7 @@ from pydantic import BaseModel, EmailStr
 
 class SignupRequest(BaseModel):
     username: str
-    email: EmailStr
+    email: Optional[str] = None
     mobile_number: Optional[str] = None
     password: str
 
@@ -19,7 +19,7 @@ class SignupRequest(BaseModel):
 # ==========================================================
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    email: str
     password: str
 
 

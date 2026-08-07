@@ -30,9 +30,10 @@ function PasswordResetSuccess() {
           Password Reset Successful!
         </h1>
 
-        {/* TC-24: Subtitle confirmation text */}
         <p className="password-success-subtitle">
-          Your password has been updated successfully. You can now log in using your new password.
+          Your password has been reset successfully.
+          <br />
+          You can now log in with your new password and continue your trading journey.
         </p>
 
         {/* TC-25: Back to Login button */}

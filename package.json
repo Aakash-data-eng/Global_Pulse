@@ -1,0 +1,10 @@
+{
+  "name": "global-pulse",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --prefix Frontend",
+    "frontend": "npm run dev --prefix Frontend",
+    "backend": "cd Backend && uvicorn app.main:app --reload --port 8000"
+  }
+}

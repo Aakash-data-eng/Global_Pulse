@@ -1,5 +1,6 @@
 from sqlalchemy import (
     Column,
+    Integer,
     BigInteger,
     String,
     Text,
@@ -20,7 +21,7 @@ from app.database import Base
 class User(Base):
     __tablename__ = "users"
 
-    user_id = Column(BigInteger, primary_key=True, index=True)
+    user_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     username = Column(String(100), unique=True, nullable=False)
     email = Column(String(255), unique=True, nullable=False)
     mobile_number = Column(String(20), unique=True)
@@ -49,9 +50,9 @@ class User(Base):
 class OTPVerification(Base):
     __tablename__ = "otp_verifications"
 
-    otp_id = Column(BigInteger, primary_key=True, index=True)
+    otp_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     user_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey("users.user_id", ondelete="CASCADE"),
         nullable=True,
     )
@@ -74,9 +75,9 @@ class OTPVerification(Base):
 class SocialLogin(Base):
     __tablename__ = "social_logins"
 
-    social_login_id = Column(BigInteger, primary_key=True)
+    social_login_id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey("users.user_id", ondelete="CASCADE"),
         nullable=False,
     )
@@ -94,9 +95,9 @@ class SocialLogin(Base):
 class UserSession(Base):
     __tablename__ = "user_sessions"
 
-    session_id = Column(BigInteger, primary_key=True)
+    session_id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey("users.user_id", ondelete="CASCADE"),
         nullable=False,
     )
@@ -120,9 +121,9 @@ class UserSession(Base):
 class UserSubscription(Base):
     __tablename__ = "user_subscriptions"
 
-    subscription_id = Column(BigInteger, primary_key=True)
+    subscription_id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey("users.user_id", ondelete="CASCADE"),
         nullable=False,
     )
@@ -143,9 +144,9 @@ class UserSubscription(Base):
 class AuditLog(Base):
     __tablename__ = "audit_logs"
 
-    audit_id = Column(BigInteger, primary_key=True)
+    audit_id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey("users.user_id"),
         nullable=False,
     )
